@@ -115,7 +115,31 @@ export function createProfile(token: string, payload: Record<string, any>) {
   });
 }
 
-export function buildWorkoutGenerationPayload(prefs: PlanPreferences) {
+export function getMyProfile(token: string) {
+  return request<ProfileResponse>("/profiles/me", { token });
+}
+
+export interface ActivePlansResponse {
+  workout_plan: FullWorkoutPlan | null;
+  nutrition_plan: FullNutritionPlan | null;
+  message: string;
+}
+
+export function getActivePlans(token: string) {
+  return request<ActivePlansResponse>("/plans/active", { token });
+}
+
+export const BENCHMARK_MODELS = [
+  { id: "qwen/qwen3-235b-a22b-2507", label: "Model A" },
+  { id: "openai/gpt-4.1-mini", label: "Model B" },
+  { id: "google/gemini-2.5-flash-preview-05-20", label: "Model C" },
+] as const;
+
+export function buildWorkoutGenerationPayload(
+  prefs: PlanPreferences,
+  modelOverride?: string,
+  skipJudge?: boolean,
+) {
   return {
     duration_weeks: prefs.durationWeeks,
     workout_preferences: {
@@ -126,10 +150,16 @@ export function buildWorkoutGenerationPayload(prefs: PlanPreferences) {
       workout_difficulty: prefs.workoutDifficulty,
       session_duration_minutes: prefs.sessionDurationMinutes,
     },
+    ...(modelOverride ? { model_override: modelOverride } : {}),
+    ...(skipJudge ? { skip_judge: true } : {}),
   };
 }
 
-export function buildNutritionGenerationPayload(prefs: PlanPreferences) {
+export function buildNutritionGenerationPayload(
+  prefs: PlanPreferences,
+  modelOverride?: string,
+  skipJudge?: boolean,
+) {
   return {
     duration_weeks: prefs.durationWeeks,
     nutrition_preferences: {
@@ -141,6 +171,8 @@ export function buildNutritionGenerationPayload(prefs: PlanPreferences) {
       cuisine_preference: prefs.cuisinePreference,
       exclude_ingredients: prefs.excludeIngredients.length ? prefs.excludeIngredients : undefined,
     },
+    ...(modelOverride ? { model_override: modelOverride } : {}),
+    ...(skipJudge ? { skip_judge: true } : {}),
   };
 }
 

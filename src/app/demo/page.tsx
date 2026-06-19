@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   ApiError,
+  BENCHMARK_MODELS,
   buildNutritionGenerationPayload,
   buildProfilePayload,
   buildWorkoutGenerationPayload,
@@ -11,7 +12,9 @@ import {
   FullWorkoutPlan,
   generateNutrition,
   generateWorkout,
+  getActivePlans,
   getMe,
+  getMyProfile,
   login,
   resendVerification,
   saveNutrition,
@@ -30,7 +33,8 @@ import GeneratingStep from "@/components/demo/GeneratingStep";
 import ProfileReadyStep from "@/components/demo/ProfileReadyStep";
 import PlanTypeChoiceStep from "@/components/demo/PlanTypeChoiceStep";
 import ResultsStep from "@/components/demo/ResultsStep";
-import FeedbackStep from "@/components/demo/FeedbackStep";
+import FeedbackStep, { ModelEvaluation } from "@/components/demo/FeedbackStep";
+import ComparisonStep, { ModelDraft } from "@/components/demo/ComparisonStep";
 
 type Phase =
   | "profile"
@@ -41,6 +45,8 @@ type Phase =
   | "planTypeChoice"
   | "planPrefs"
   | "generatingPlans"
+  | "comparing"
+  | "savingChosen"
   | "results"
   | "feedback";
 
@@ -64,8 +70,8 @@ const defaultPlanAnswers: Partial<PlanPreferences> = {
   excludeIngredients: [],
 };
 
-const PROFILE_TOTAL_STEPS = profileSteps.length + 1; // +1 for account creation
-const PLAN_TOTAL_STEPS = planSteps.length + 1; // +1 for the workout/nutrition/both choice
+const PROFILE_TOTAL_STEPS = profileSteps.length + 1;
+const PLAN_TOTAL_STEPS = planSteps.length + 1;
 
 function nextValidIndex(steps: Step[], from: number, dir: 1 | -1, answers: Record<string, unknown>) {
   let i = from + dir;
@@ -73,18 +79,47 @@ function nextValidIndex(steps: Step[], from: number, dir: 1 | -1, answers: Recor
   return i;
 }
 
+const SESSION_KEY = "fitmind_demo";
+
+function loadSession() {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveSession(data: Record<string, unknown>) {
+  if (typeof window === "undefined") return;
+  try {
+    const existing = loadSession() || {};
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify({ ...existing, ...data }));
+  } catch { /* quota exceeded — non-fatal */ }
+}
+
+function resumePhase(saved: Record<string, unknown> | null): Phase {
+  if (!saved?.token) return "account";
+  if (!saved.profileCreated) return "profile";
+  return "profileReady";
+}
+
 export default function DemoPage() {
-  const [phase, setPhase] = useState<Phase>("account");
+  const [restored] = useState(() => loadSession());
+  const [phase, setPhase] = useState<Phase>(() => resumePhase(restored));
 
   const [profileIndex, setProfileIndex] = useState(0);
-  const [profileAnswers, setProfileAnswers] = useState<Partial<ProfileAnswers>>(defaultProfileAnswers);
+  const [profileAnswers, setProfileAnswers] = useState<Partial<ProfileAnswers>>(
+    () => (restored?.profileAnswers as Partial<ProfileAnswers>) || defaultProfileAnswers
+  );
 
   const [planTypeChoice, setPlanTypeChoice] = useState<PlanTypeChoice>("");
   const [planIndex, setPlanIndex] = useState(0);
   const [planAnswers, setPlanAnswers] = useState<Partial<PlanPreferences>>(defaultPlanAnswers);
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState(() => (restored?.email as string) || "");
+  const [password, setPassword] = useState(() => (restored?.password as string) || "");
   const [accountLoading, setAccountLoading] = useState(false);
   const [accountError, setAccountError] = useState<string | null>(null);
 
@@ -92,9 +127,45 @@ export default function DemoPage() {
   const [resending, setResending] = useState(false);
   const [verifyError, setVerifyError] = useState<string | null>(null);
 
-  const [token, setToken] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(() => (restored?.token as string) || null);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [genError, setGenError] = useState<string | null>(null);
+
+  // Validate restored token on mount — if expired, try re-login; then check user state
+  useEffect(() => {
+    if (!token) return;
+    (async () => {
+      try {
+        await getMe(token);
+        await checkUserStateAndResume(token);
+      } catch {
+        if (email && password) {
+          try {
+            const { token: fresh } = await login(email, password);
+            setToken(fresh);
+            persistAuth(fresh, email, password);
+            await checkUserStateAndResume(fresh);
+            return;
+          } catch { /* re-login failed */ }
+        }
+        setToken(null);
+        setPhase("account");
+        sessionStorage.removeItem(SESSION_KEY);
+      }
+    })();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const persistAuth = useCallback((t: string, e: string, p: string) => {
+    saveSession({ token: t, email: e, password: p });
+  }, []);
+
+  const persistProfileDone = useCallback(() => {
+    saveSession({ profileCreated: true, profileAnswers });
+  }, [profileAnswers]);
+
+  // Benchmark: 3 model drafts
+  const [modelDrafts, setModelDrafts] = useState<ModelDraft[]>([]);
+  const [chosenModelIndex, setChosenModelIndex] = useState<number | null>(null);
 
   const [workoutFull, setWorkoutFull] = useState<FullWorkoutPlan | null>(null);
   const [nutritionFull, setNutritionFull] = useState<FullNutritionPlan | null>(null);
@@ -142,7 +213,7 @@ export default function DemoPage() {
   function goPlanNext() {
     const next = nextValidIndex(planSteps, planIndex, 1, planAnswers as Record<string, unknown>);
     if (next < planSteps.length) setPlanIndex(next);
-    else runPlanGeneration();
+    else runBenchmarkGeneration();
   }
 
   function goPlanBack() {
@@ -156,6 +227,7 @@ export default function DemoPage() {
     try {
       const me = await getMe(userToken);
       await createProfile(userToken, buildProfilePayload(profileAnswers as ProfileAnswers, me.id));
+      persistProfileDone();
       setPhase("profileReady");
     } catch (err) {
       setProfileError(
@@ -164,30 +236,77 @@ export default function DemoPage() {
     }
   }
 
-  async function runPlanGeneration() {
+  async function runBenchmarkGeneration() {
     if (!token) return;
     setGenError(null);
     setPhase("generatingPlans");
+
+    const prefs = planAnswers as PlanPreferences;
+
+    // Generate one plan per model, all in parallel, all with skip_judge=true
+    const results = await Promise.allSettled(
+      BENCHMARK_MODELS.map(async (model) => {
+        const [workoutDraft, nutritionDraft] = await Promise.all([
+          prefs.wantsWorkout
+            ? generateWorkout(token, buildWorkoutGenerationPayload(prefs, model.id, true))
+            : null,
+          prefs.wantsNutrition
+            ? generateNutrition(token, buildNutritionGenerationPayload(prefs, model.id, true))
+            : null,
+        ]);
+        return { workoutDraft, nutritionDraft };
+      })
+    );
+
+    const drafts: ModelDraft[] = results.map((result, i) => {
+      const model = BENCHMARK_MODELS[i];
+      if (result.status === "fulfilled") {
+        return {
+          label: model.label,
+          modelId: model.id,
+          workoutDraft: result.value.workoutDraft,
+          nutritionDraft: result.value.nutritionDraft,
+          error: null,
+        };
+      }
+      return {
+        label: model.label,
+        modelId: model.id,
+        workoutDraft: null,
+        nutritionDraft: null,
+        error: result.reason instanceof ApiError ? result.reason.message : "Generation failed",
+      };
+    });
+
+    const hasAny = drafts.some((d) => !d.error);
+    if (!hasAny) {
+      setGenError("All three models failed to generate a plan. Please try again.");
+      return;
+    }
+
+    setModelDrafts(drafts);
+    setPhase("comparing");
+  }
+
+  async function handleComparisonSelect(index: number) {
+    if (!token) return;
+    setChosenModelIndex(index);
+    setPhase("savingChosen");
+
+    const chosen = modelDrafts[index];
     try {
-      const prefs = planAnswers as PlanPreferences;
-
-      const [workoutDraft, nutritionDraft] = await Promise.all([
-        prefs.wantsWorkout ? generateWorkout(token, buildWorkoutGenerationPayload(prefs)) : null,
-        prefs.wantsNutrition ? generateNutrition(token, buildNutritionGenerationPayload(prefs)) : null,
-      ]);
-
       const [savedWorkout, savedNutrition] = await Promise.all([
-        workoutDraft ? saveWorkout(token, workoutDraft) : null,
-        nutritionDraft ? saveNutrition(token, nutritionDraft) : null,
+        chosen.workoutDraft ? saveWorkout(token, chosen.workoutDraft) : null,
+        chosen.nutritionDraft ? saveNutrition(token, chosen.nutritionDraft) : null,
       ]);
-
       setWorkoutFull(savedWorkout);
       setNutritionFull(savedNutrition);
       setPhase("results");
     } catch (err) {
       setGenError(
-        err instanceof ApiError ? err.message : "Couldn't generate your plan. Please try again."
+        err instanceof ApiError ? err.message : "Couldn't save the chosen plan. Please try again."
       );
+      setPhase("comparing");
     }
   }
 
@@ -202,6 +321,29 @@ export default function DemoPage() {
     setPhase("planPrefs");
   }
 
+  async function checkUserStateAndResume(userToken: string) {
+    // 1. Check for active plans — if they exist, show them directly
+    try {
+      const plans = await getActivePlans(userToken);
+      if (plans.workout_plan || plans.nutrition_plan) {
+        setWorkoutFull(plans.workout_plan);
+        setNutritionFull(plans.nutrition_plan);
+        setPhase("results");
+        return;
+      }
+    } catch { /* no active plans, continue */ }
+
+    // 2. Check if profile exists — if so, go to plan generation
+    try {
+      await getMyProfile(userToken);
+      saveSession({ profileCreated: true });
+      setPhase("profileReady");
+      return;
+    } catch { /* no profile, go to profile creation */ }
+
+    setPhase("profile");
+  }
+
   async function handleAccountSubmit(name: string, emailInput: string, passwordInput: string) {
     setAccountLoading(true);
     setAccountError(null);
@@ -209,10 +351,30 @@ export default function DemoPage() {
       await signup(name, emailInput, passwordInput);
       setEmail(emailInput);
       setPassword(passwordInput);
+      saveSession({ email: emailInput, password: passwordInput });
       setPhase("verify");
     } catch (err) {
       setAccountError(
         err instanceof ApiError ? err.message : "Couldn't create your account. Please try again."
+      );
+    } finally {
+      setAccountLoading(false);
+    }
+  }
+
+  async function handleLogin(emailInput: string, passwordInput: string) {
+    setAccountLoading(true);
+    setAccountError(null);
+    try {
+      const { token: newToken } = await login(emailInput, passwordInput);
+      setToken(newToken);
+      setEmail(emailInput);
+      setPassword(passwordInput);
+      persistAuth(newToken, emailInput, passwordInput);
+      await checkUserStateAndResume(newToken);
+    } catch (err) {
+      setAccountError(
+        err instanceof ApiError ? err.message : "Invalid email or password."
       );
     } finally {
       setAccountLoading(false);
@@ -225,7 +387,8 @@ export default function DemoPage() {
     try {
       const { token: newToken } = await login(email, password);
       setToken(newToken);
-      setPhase("profile");
+      persistAuth(newToken, email, password);
+      await checkUserStateAndResume(newToken);
     } catch {
       setVerifyError("Your email isn't verified yet. Check your inbox, then try again.");
     } finally {
@@ -242,11 +405,23 @@ export default function DemoPage() {
     }
   }
 
-  async function handleFeedbackSubmit(
-    rating: number,
-    foundPlanHelpful: boolean | null,
-    comments: string
-  ) {
+  const modelEval: ModelEvaluation | undefined =
+    chosenModelIndex !== null && modelDrafts[chosenModelIndex]
+      ? {
+          chosenModelId: modelDrafts[chosenModelIndex].modelId,
+          chosenModelLabel: modelDrafts[chosenModelIndex].label,
+          allModelIds: BENCHMARK_MODELS.map((m) => m.id),
+        }
+      : undefined;
+
+  async function handleFeedbackSubmit(data: {
+    rating: number;
+    foundPlanHelpful: boolean | null;
+    comments: string;
+    planClarity: number;
+    planPersonalization: number;
+    wouldFollowPlan: boolean | null;
+  }) {
     setFeedbackSubmitting(true);
     try {
       await fetch("/api/feedback", {
@@ -254,9 +429,9 @@ export default function DemoPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email,
-          rating,
-          comments,
-          foundPlanHelpful,
+          rating: data.rating,
+          comments: data.comments,
+          foundPlanHelpful: data.foundPlanHelpful,
           assessmentAnswers: { profile: profileAnswers, planPreferences: planAnswers },
           generatedPlanSummary: {
             workout: workoutFull
@@ -266,6 +441,17 @@ export default function DemoPage() {
               ? { planName: nutritionFull.plan_name, dailyCalories: nutritionFull.daily_calories }
               : null,
           },
+          // Model evaluation data
+          ...(modelEval
+            ? {
+                chosenModelId: modelEval.chosenModelId,
+                chosenModelLabel: modelEval.chosenModelLabel,
+                allModelIds: modelEval.allModelIds,
+                planClarity: data.planClarity,
+                planPersonalization: data.planPersonalization,
+                wouldFollowPlan: data.wouldFollowPlan,
+              }
+            : {}),
         }),
       });
       setFeedbackSubmitted(true);
@@ -274,12 +460,15 @@ export default function DemoPage() {
     }
   }
 
+  // ── Render phases ─────────────────────────────────────────────────────
+
   if (phase === "account") {
     return (
       <AccountStep
         stepNumber={1}
         totalSteps={PROFILE_TOTAL_STEPS}
         onSubmit={handleAccountSubmit}
+        onLogin={handleLogin}
         loading={accountLoading}
         error={accountError}
       />
@@ -329,7 +518,15 @@ export default function DemoPage() {
   }
 
   if (phase === "generatingPlans") {
-    return <GeneratingStep error={genError} onRetry={runPlanGeneration} />;
+    return <GeneratingStep error={genError} onRetry={runBenchmarkGeneration} />;
+  }
+
+  if (phase === "comparing") {
+    return <ComparisonStep drafts={modelDrafts} onSelect={handleComparisonSelect} />;
+  }
+
+  if (phase === "savingChosen") {
+    return <GeneratingStep error={genError} onRetry={() => chosenModelIndex !== null && handleComparisonSelect(chosenModelIndex)} />;
   }
 
   if (phase === "results") {
@@ -348,6 +545,7 @@ export default function DemoPage() {
         onSubmit={handleFeedbackSubmit}
         submitting={feedbackSubmitting}
         submitted={feedbackSubmitted}
+        modelEval={modelEval}
       />
     );
   }

@@ -23,5 +23,12 @@ model Feedback {
   foundPlanHelpful      Boolean?
   assessmentAnswers     Json
   generatedPlanSummary  Json?
+  // Model benchmark fields
+  chosenModelId         String?
+  chosenModelLabel      String?
+  allModelIds           Json?     // ["qwen/...", "openai/...", "google/..."]
+  planClarity           Int?      // 1-5: how clear/readable the chosen plan was
+  planPersonalization   Int?      // 1-5: how personalized it felt
+  wouldFollowPlan       Boolean?  // would the user actually follow this plan?
   createdAt             DateTime @default(now())
 }
