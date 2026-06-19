@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft } from "lucide-react";
 import { ReactNode } from "react";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 export default function StepShell({
   stepKey,
@@ -22,7 +23,7 @@ export default function StepShell({
   footer?: ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen flex-col bg-background px-6 py-8">
+    <div className="flex min-h-screen flex-col bg-background px-4 sm:px-6 py-8">
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
         <div className="flex items-center justify-between">
           {onBack ? (
@@ -36,9 +37,9 @@ export default function StepShell({
           ) : (
             <span className="h-9 w-9" />
           )}
-          <span className="font-display text-sm font-semibold text-muted">Assessment</span>
+          <LanguageSwitcher />
           <span className="rounded-full bg-brand/15 px-3 py-1 text-xs font-semibold text-brand">
-            {stepNumber} of {totalSteps}
+            {stepNumber} / {totalSteps}
           </span>
         </div>
 

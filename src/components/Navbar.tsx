@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useLang } from "@/lib/lang-context";
 import { ts } from "@/lib/translations";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
 
@@ -19,7 +20,7 @@ export default function Navbar() {
 
   return (
     <header className="fixed top-4 inset-x-0 z-40 flex justify-center px-4">
-      <nav className="flex w-full max-w-2xl items-center justify-between gap-4 rounded-full border border-white/10 bg-[#0a0908]/90 px-2.5 py-2 shadow-2xl shadow-black/40 backdrop-blur-md">
+      <nav className="flex w-full max-w-2xl items-center justify-between gap-2 sm:gap-4 rounded-full border border-white/10 bg-[#0a0908]/90 px-2.5 py-2 shadow-2xl shadow-black/40 backdrop-blur-md">
         <Link
           href="/"
           className="flex items-center gap-2 rounded-full bg-brand px-3 py-1.5 font-display font-bold text-sm text-background"
@@ -37,6 +38,7 @@ export default function Navbar() {
         </div>
 
         <div className="flex items-center gap-2">
+          <LanguageSwitcher />
           <Link
             href="/demo"
             className="hidden rounded-full bg-white px-4 py-2 text-sm font-semibold text-black transition-transform hover:scale-105 sm:inline-flex"
