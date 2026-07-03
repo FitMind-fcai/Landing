@@ -17,6 +17,7 @@ export default function FeedbackStep({
   onSubmit,
   submitting,
   submitted,
+  error,
   modelEval,
 }: {
   onSubmit: (data: {
@@ -29,6 +30,7 @@ export default function FeedbackStep({
   }) => void;
   submitting: boolean;
   submitted: boolean;
+  error?: string | null;
   modelEval?: ModelEvaluation;
 }) {
   const { lang } = useLang();
@@ -61,7 +63,7 @@ export default function FeedbackStep({
     );
   }
 
-  const isValid = rating > 0 && (modelEval ? clarity > 0 && personalization > 0 : true);
+  const isValid = rating > 0 && clarity > 0 && personalization > 0;
 
   return (
     <div className="flex min-h-screen flex-col bg-background px-4 sm:px-6 py-12">
@@ -78,63 +80,59 @@ export default function FeedbackStep({
           ))}
         </div>
 
-        {modelEval && (
-          <>
-            <p className="mt-8 text-sm font-semibold">{ts(lang, "fbClarity")}</p>
-            <div className="mt-2 flex justify-center gap-2">
-              {[1, 2, 3, 4, 5].map((n) => (
-                <button
-                  key={n}
-                  onClick={() => setClarity(n)}
-                  className={`flex h-10 w-10 items-center justify-center rounded-xl border text-sm font-bold transition-colors ${
-                    clarity === n
-                      ? "border-brand bg-brand/10 text-brand"
-                      : "border-border bg-surface hover:border-brand/40"
-                  }`}
-                >
-                  {n}
-                </button>
-              ))}
-            </div>
+        <p className="mt-8 text-sm font-semibold">{ts(lang, "fbClarity")}</p>
+        <div className="mt-2 flex justify-center gap-2">
+          {[1, 2, 3, 4, 5].map((n) => (
+            <button
+              key={n}
+              onClick={() => setClarity(n)}
+              className={`flex h-10 w-10 items-center justify-center rounded-xl border text-sm font-bold transition-colors ${
+                clarity === n
+                  ? "border-brand bg-brand/10 text-brand"
+                  : "border-border bg-surface hover:border-brand/40"
+              }`}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
 
-            <p className="mt-6 text-sm font-semibold">{ts(lang, "fbPersonalization")}</p>
-            <div className="mt-2 flex justify-center gap-2">
-              {[1, 2, 3, 4, 5].map((n) => (
-                <button
-                  key={n}
-                  onClick={() => setPersonalization(n)}
-                  className={`flex h-10 w-10 items-center justify-center rounded-xl border text-sm font-bold transition-colors ${
-                    personalization === n
-                      ? "border-brand bg-brand/10 text-brand"
-                      : "border-border bg-surface hover:border-brand/40"
-                  }`}
-                >
-                  {n}
-                </button>
-              ))}
-            </div>
+        <p className="mt-6 text-sm font-semibold">{ts(lang, "fbPersonalization")}</p>
+        <div className="mt-2 flex justify-center gap-2">
+          {[1, 2, 3, 4, 5].map((n) => (
+            <button
+              key={n}
+              onClick={() => setPersonalization(n)}
+              className={`flex h-10 w-10 items-center justify-center rounded-xl border text-sm font-bold transition-colors ${
+                personalization === n
+                  ? "border-brand bg-brand/10 text-brand"
+                  : "border-border bg-surface hover:border-brand/40"
+              }`}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
 
-            <p className="mt-6 text-sm font-semibold">{ts(lang, "fbWouldFollow")}</p>
-            <div className="mt-2 flex gap-3">
-              {[
-                { label: ts(lang, "fbYes"), value: true },
-                { label: ts(lang, "fbNo"), value: false },
-              ].map((opt) => (
-                <button
-                  key={opt.label}
-                  onClick={() => setWouldFollow(opt.value)}
-                  className={`flex-1 rounded-2xl border py-3 font-medium transition-colors ${
-                    wouldFollow === opt.value
-                      ? "border-brand bg-brand/10"
-                      : "border-border bg-surface hover:border-brand/40"
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </>
-        )}
+        <p className="mt-6 text-sm font-semibold">{ts(lang, "fbWouldFollow")}</p>
+        <div className="mt-2 flex gap-3">
+          {[
+            { label: ts(lang, "fbYes"), value: true },
+            { label: ts(lang, "fbNo"), value: false },
+          ].map((opt) => (
+            <button
+              key={opt.label}
+              onClick={() => setWouldFollow(opt.value)}
+              className={`flex-1 rounded-2xl border py-3 font-medium transition-colors ${
+                wouldFollow === opt.value
+                  ? "border-brand bg-brand/10"
+                  : "border-border bg-surface hover:border-brand/40"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
 
         <p className="mt-8 text-sm font-semibold">{ts(lang, "fbPersonalized")}</p>
         <div className="mt-3 flex gap-3">
@@ -182,6 +180,8 @@ export default function FeedbackStep({
         >
           {submitting ? ts(lang, "fbSending") : ts(lang, "fbSubmit")}
         </motion.button>
+
+        {error && <p className="mt-3 text-center text-sm text-red-400">{error}</p>}
       </div>
     </div>
   );
