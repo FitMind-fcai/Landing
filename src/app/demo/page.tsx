@@ -176,6 +176,7 @@ export default function DemoPage() {
 
   const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+  const [feedbackError, setFeedbackError] = useState<string | null>(null);
 
   const currentProfileStep = profileSteps[profileIndex];
   const currentPlanStep = planSteps[planIndex];
@@ -427,8 +428,9 @@ export default function DemoPage() {
     wouldFollowPlan: boolean | null;
   }) {
     setFeedbackSubmitting(true);
+    setFeedbackError(null);
     try {
-      await fetch("/api/feedback", {
+      const res = await fetch("/api/feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -445,20 +447,25 @@ export default function DemoPage() {
               ? { planName: nutritionFull.plan_name, dailyCalories: nutritionFull.daily_calories }
               : null,
           },
-          // Model evaluation data
+          planClarity: data.planClarity,
+          planPersonalization: data.planPersonalization,
+          wouldFollowPlan: data.wouldFollowPlan,
+          // Only present when this session actually ran the 3-model comparison.
           ...(modelEval
             ? {
                 chosenModelId: modelEval.chosenModelId,
                 chosenModelLabel: modelEval.chosenModelLabel,
                 allModelIds: modelEval.allModelIds,
-                planClarity: data.planClarity,
-                planPersonalization: data.planPersonalization,
-                wouldFollowPlan: data.wouldFollowPlan,
               }
             : {}),
         }),
       });
+      if (!res.ok) {
+        throw new Error(`Request failed (${res.status})`);
+      }
       setFeedbackSubmitted(true);
+    } catch {
+      setFeedbackError("Couldn't submit your feedback — please try again.");
     } finally {
       setFeedbackSubmitting(false);
     }
@@ -549,6 +556,7 @@ export default function DemoPage() {
         onSubmit={handleFeedbackSubmit}
         submitting={feedbackSubmitting}
         submitted={feedbackSubmitted}
+        error={feedbackError}
         modelEval={modelEval}
       />
     );
