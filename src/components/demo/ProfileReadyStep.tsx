@@ -30,6 +30,11 @@ export default function ProfileReadyStep({
           {ts(lang, "profileReadySub")}
         </p>
 
+        <div className="max-w-sm rounded-2xl border border-border bg-surface/50 p-4 text-start">
+          <p className="text-sm font-semibold">{ts(lang, "profileReadyNextTitle")}</p>
+          <p className="mt-1.5 text-xs text-muted">{ts(lang, "profileReadyNextBody")}</p>
+        </div>
+
         <div className="mt-4 flex w-full max-w-xs flex-col gap-3">
           <button
             onClick={onGeneratePlan}

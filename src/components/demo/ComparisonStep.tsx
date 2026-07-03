@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { ArrowRight, Check } from "lucide-react";
 import type { WorkoutDraftResponse, NutritionDraftResponse } from "@/lib/api";
 import { useLang } from "@/lib/lang-context";
-import { ts } from "@/lib/translations";
+import { ta, ts } from "@/lib/translations";
 
 export interface ModelDraft {
   label: string;
@@ -142,6 +142,23 @@ export default function ComparisonStep({
           <p className="mx-auto mt-2 max-w-md text-center text-sm text-muted">
             {ts(lang, "compSub")}
           </p>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="mx-auto mt-6 max-w-2xl rounded-2xl border border-border bg-surface/50 p-4 sm:p-5"
+        >
+          <p className="text-sm font-semibold">{ts(lang, "compHowTitle")}</p>
+          <ul className="mt-2 space-y-1.5 text-xs sm:text-sm text-muted">
+            {ta(lang, "compHowPoints").map((point, i) => (
+              <li key={i} className="flex items-start gap-2">
+                <span className="mt-0.5 text-brand">&#8226;</span>
+                <span>{point}</span>
+              </li>
+            ))}
+          </ul>
         </motion.div>
 
         <div className="mt-8 grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">

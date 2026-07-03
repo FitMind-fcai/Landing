@@ -15,6 +15,7 @@ const translations = {
     heroStat1: "~100K exercises",
     heroStat2: "8.7K+ foods recognized",
     heroStat3: "Real AI plans, not templates",
+    heroTestingNote: "This is a live research preview: every assessment is used to test multiple AI models side by side so we can find the best one.",
 
     // Features
     featuresTitle: "Everything your coach would do.",
@@ -91,6 +92,8 @@ const translations = {
     profileReadySub: "We've saved your profile to your account. Want a real, AI-generated workout and nutrition plan based on it right now?",
     profileReadyCta: "Generate my plan now",
     profileReadyLater: "Maybe later",
+    profileReadyNextTitle: "What happens if you continue?",
+    profileReadyNextBody: "This is a testing round: 3 different AI models will each build a full plan from your answers. You'll see all three side by side and pick the one you like best — your pick is what helps us find the best model for everyone.",
 
     // Demo — Common
     commonContinue: "Continue",
@@ -138,6 +141,12 @@ const translations = {
     // Demo — Comparison
     compTitle: "Pick the plan you like best",
     compSub: "Three AI models generated a plan for you. Compare them and choose your favorite. This helps us find the best model for everyone.",
+    compHowTitle: "How to pick",
+    compHowPoints: [
+      "Clarity — is it easy to read and follow, without confusing or contradictory instructions?",
+      "Personalization — does it actually reflect your goals, body, and limitations, or does it feel generic?",
+      "Would you do it — could you realistically follow this plan starting tomorrow?",
+    ],
     compUse: "Use",
     compPlan: "plan",
     compFailed: "Generation failed:",
@@ -186,6 +195,7 @@ const translations = {
     heroStat1: "~100 ألف تمرين",
     heroStat2: "8.7 ألف+ وجبة معروفة",
     heroStat3: "خطط ذكية، مش قوالب",
+    heroTestingNote: "ده معاينة تجريبية حية: كل تقييم بيتستخدم عشان نجرّب أكتر من نموذج ذكاء اصطناعي مع بعض ونلاقي أحسن واحد.",
 
     // Features
     featuresTitle: "كل اللي مدربك هيعمله.",
@@ -262,6 +272,8 @@ const translations = {
     profileReadySub: "حفظنا بروفايلك في حسابك. عايز خطة تمارين وتغذية بالذكاء الاصطناعي دلوقتي؟",
     profileReadyCta: "ولّد خطتي دلوقتي",
     profileReadyLater: "بعدين",
+    profileReadyNextTitle: "هيحصل إيه لو كمّلت؟",
+    profileReadyNextBody: "ده جولة تجريبية: ٣ نماذج ذكاء اصطناعي مختلفين هيبنوا خطة كاملة من إجاباتك. هتشوف التلاتة مع بعض وتختار اللي عجبك أكتر — اختيارك هو اللي بيساعدنا نلاقي أحسن نموذج للكل.",
 
     // Demo — Common
     commonContinue: "التالي",
@@ -309,6 +321,12 @@ const translations = {
     // Demo — Comparison
     compTitle: "اختار أحسن خطة",
     compSub: "٣ نماذج ذكاء اصطناعي ولّدوا خطة ليك. قارن بينهم واختار المفضّل. ده بيساعدنا نلاقي أحسن نموذج للكل.",
+    compHowTitle: "إزاي تختار",
+    compHowPoints: [
+      "الوضوح — سهلة القراءة والتنفيذ، من غير تعليمات مربكة أو متناقضة؟",
+      "التخصيص — بتعبّر فعلاً عن أهدافك وجسمك وظروفك الصحية، ولا حاسس إنها عامة؟",
+      "هتعملها فعلاً — ممكن تبدأ تنفّذ الخطة دي بجد بكرة؟",
+    ],
     compUse: "استخدم",
     compPlan: "خطة",
     compFailed: "التوليد فشل:",

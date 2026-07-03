@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, FlaskConical, Sparkles } from "lucide-react";
 import GlowBackground from "./GlowBackground";
 import PhoneFrame from "./PhoneFrame";
 import CalorieStatsCard from "./CalorieStatsCard";
@@ -77,6 +77,16 @@ export default function Hero() {
               {ts(lang, "heroExplore")}
             </a>
           </motion.div>
+
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.75 }}
+            className="mt-4 flex items-start gap-2 max-w-md text-xs sm:text-sm text-muted"
+          >
+            <FlaskConical size={16} className="mt-0.5 shrink-0 text-brand" />
+            <span>{ts(lang, "heroTestingNote")}</span>
+          </motion.p>
 
           <motion.div
             initial={{ opacity: 0 }}
