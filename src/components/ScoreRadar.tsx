@@ -30,14 +30,14 @@ export default function ScoreRadar() {
             key={scale}
             points={polygon(axes.map(() => scale))}
             fill="none"
-            stroke="#2a2624"
+            stroke="var(--border)"
             strokeWidth={1}
           />
         ))}
         {axes.map((_, i) => {
           const [x, y] = point(i, 1);
           return (
-            <line key={i} x1={center} y1={center} x2={x} y2={y} stroke="#2a2624" strokeWidth={1} />
+            <line key={i} x1={center} y1={center} x2={x} y2={y} stroke="var(--border)" strokeWidth={1} />
           );
         })}
 

@@ -2,12 +2,14 @@
 
 import { ReactNode } from "react";
 import { LangProvider } from "@/lib/lang-context";
-import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { ThemeProvider } from "@/lib/theme-context";
 
 export default function ClientShell({ children }: { children: ReactNode }) {
   return (
-    <LangProvider>
-      {children}
-    </LangProvider>
+    <ThemeProvider>
+      <LangProvider>
+        {children}
+      </LangProvider>
+    </ThemeProvider>
   );
 }
